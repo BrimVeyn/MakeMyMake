@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: bvan-pae <bryan.vanpaemel@gmail.com>       +#+  +:+       +#+        */
+/*   By: nbardavi <nbabardavid@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/21 11:41:26 by bvan-pae          #+#    #+#             */
-/*   Updated: 2024/03/22 14:10:40 by bvan-pae         ###   ########.fr       */
+/*   Updated: 2024/03/22 16:00:59 by nbardavi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,11 @@
 #include <iostream>
 #include <filesystem>
 #include <string>
+#include <string.h>
 
 namespace fs = std::filesystem;
+
+size_t flags = 0;
 
 std::vector<std::string> findCppFiles(const std::string& directory, char **av) {
 
@@ -24,20 +27,41 @@ std::vector<std::string> findCppFiles(const std::string& directory, char **av) {
 
     for (const auto& entry : fs::directory_iterator(directory)) {
         if (entry.is_regular_file() && entry.path().extension() == ".cpp") {
-            tab.push_back(av[2] / entry.path().filename());
+            tab.push_back(av[2 + flags] / entry.path().filename());
         }
     }
 	return tab;
 }
 
+std::vector<std::string> askCppFiles(char **av){
+	std::string input;
+	std::vector<std::string> tab;
+	std::string src_directory = av[2 + flags];
+
+	while(1){
+		std::cout << "Enter filename (enter STOP to stop) : ";
+		std::getline(std::cin, input);
+		if (input == "STOP"){
+			break;	
+		}
+		tab.push_back(src_directory + "/" + input);
+		std::cout << std::endl;
+	}
+	return (tab);
+}
+
 int main(int ac, char **av)
 {
-	if (ac != 3 && ac != 4)
+
+	if (ac < 3)
 	{
 		std::cerr << "Error: usage: ./mmm <input makefile> <srcs directory> {custom source name}" <<std::endl;
 		return 1;
 	}
-	std::ifstream inputFile(av[1]);
+	if (strcmp(av[1], "-i") == 0){
+		flags += 1;
+	}
+	std::ifstream inputFile(av[1 + flags]);
 	if (!inputFile)
 	{
 		std::cerr << "Error: could not open input file" <<std::endl;
@@ -50,16 +74,23 @@ int main(int ac, char **av)
 		return 1;
 	}
 
+
 	std::vector<std::string> v = {"SRC", "SRCS", "SOURCE", "SOURCES"};
 
-	if (ac == 4)
-		v.push_back(av[3]);
+	if (ac == 4 + (int)flags)
+		v.push_back(av[3 + flags]);
 
 	fs::path directory = fs::current_path();
-	directory /= av[2];
+	directory /= av[2 + flags];
 	std::cout << "path = " << directory << std::endl;
 
-	std::vector<std::string> userSrcs = findCppFiles(directory, av);
+	std::vector<std::string> userSrcs;
+	if (flags == 1){
+		userSrcs = askCppFiles(av);
+	}
+	else{
+		userSrcs = findCppFiles(directory, av);
+	}
 	if (!userSrcs.size())
 	{
 		std::cerr << "Error reading directory" << std::endl;
